@@ -14,6 +14,8 @@ func init() {
 	fmt.Println("I'm up and running!")
 }
 
+//
+
 func main() {
 	flag.Parse()
 	tpl := template.Must(template.ParseFiles("index.html"))
@@ -25,6 +27,8 @@ func main() {
 	log.Printf("serving on port 3000")
 	log.Fatal(http.ListenAndServe(":3000", router))
 }
+
+// extend message to be a json? with roomKey and Event and Score
 
 func homeHandler(tpl *template.Template) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

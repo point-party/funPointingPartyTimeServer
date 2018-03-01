@@ -13,7 +13,7 @@ type hub struct {
 	connectionsMx sync.RWMutex
 
 	// Registered connections.
-	connections map[*connection]struct{}
+	rooms map[string][]*connection
 
 	// Inbound messages from the connections.
 	broadcast chan []byte
@@ -26,12 +26,13 @@ func newHub() *hub {
 	h := &hub{
 		connectionsMx: sync.RWMutex{},
 		broadcast:     make(chan []byte),
-		connections:   make(map[*connection]struct{}),
+		rooms:         make(map[string][]*connection),
 	}
 
 	go func() {
 		for {
 			msg := <-h.broadcast
+			// decide how to only send message to connections within room
 			h.connectionsMx.RLock()
 			for c := range h.connections {
 				select {
@@ -55,11 +56,28 @@ func (h *hub) addConnection(conn *connection) {
 	h.connections[conn] = struct{}{}
 }
 
-func (h *hub) removeConnection(conn *connection) {
+// make methods for rooms
+// add connection to room
+// remove connection from room
+// add room to hub rooms map
+// remove room from hub rooms map
+
+func (h *hub) removeRoom(room string) {
 	h.connectionsMx.Lock()
 	defer h.connectionsMx.Unlock()
-	if _, ok := h.connections[conn]; ok {
-		delete(h.connections, conn)
+	if _, ok := h.rooms[room]; ok {
+		delete(h.rooms, room)
 		close(conn.send)
 	}
+}
+
+func (h *hub) findConnection(conn *connection) bool {
+	for k, _ := range h.rooms {
+		for _, v := range h.rooms[k] {
+			if v == conn {
+				return true
+			}
+		}
+	}
+	return false
 }
