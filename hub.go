@@ -1,65 +1,44 @@
 package main
 
 import (
-	"log"
-	"sync"
-	"time"
+	"fmt"
 )
 
-// hub maintains the set of active clients and broadcasts messages to the clients.
+// Hub maintains the set of active rooms.
+type Hub struct {
+	// Registered rooms.
+	rooms map[*Room]bool
 
-type hub struct {
-	// mutex to protect connections
-	connectionsMx sync.RWMutex
+	// Register requests from the rooms.
+	register chan *Room
 
-	// Registered connections.
-	connections map[*connection]struct{}
-
-	// Inbound messages from the connections.
-	broadcast chan []byte
-
-	logMx sync.RWMutex
-	log   [][]byte
+	// Unregister requests from rooms.
+	unregister chan *Room
 }
 
-func newHub() *hub {
-	h := &hub{
-		connectionsMx: sync.RWMutex{},
-		broadcast:     make(chan []byte),
-		connections:   make(map[*connection]struct{}),
+func newHub() *Hub {
+	return &Hub{
+		register:   make(chan *Room),
+		unregister: make(chan *Room),
+		rooms:      make(map[*Room]bool),
 	}
+}
 
-	go func() {
-		for {
-			msg := <-h.broadcast
-			h.connectionsMx.RLock()
-			for c := range h.connections {
-				select {
-				case c.send <- msg:
-					// stop trying to send to this connection after trying for 1 second.
-					// if we have to stop, it means that a reader died so remove the connection also.
-				case <-time.After(1 * time.Second):
-					log.Printf("shutting down connection %s", c)
-					h.removeConnection(c)
-				}
+func (h *Hub) run() {
+	for {
+		select {
+		case room := <-h.register:
+			h.rooms[room] = true
+		case room := <-h.unregister:
+			if _, ok := h.rooms[room]; ok {
+				delete(h.rooms, room)
 			}
-			h.connectionsMx.RUnlock()
 		}
-	}()
-	return h
+	}
 }
 
-func (h *hub) addConnection(conn *connection) {
-	h.connectionsMx.Lock()
-	defer h.connectionsMx.Unlock()
-	h.connections[conn] = struct{}{}
-}
-
-func (h *hub) removeConnection(conn *connection) {
-	h.connectionsMx.Lock()
-	defer h.connectionsMx.Unlock()
-	if _, ok := h.connections[conn]; ok {
-		delete(h.connections, conn)
-		close(conn.send)
+func (h *Hub) listRooms() {
+	for k := range h.rooms {
+		fmt.Println("Rooms", k)
 	}
 }

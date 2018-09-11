@@ -1,40 +1,67 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
-	"github.com/alecthomas/template"
+	"github.com/rs/cors"
 )
 
-func init() {
-	fmt.Println("I'm up and running!")
+var rooms = make(map[*Room]bool)
+
+// HubHandler stores the hub
+type HubHandler struct {
+	hub *Hub
+}
+
+func (h *Hub) generateRoom(w http.ResponseWriter, r *http.Request) {
+	name := "firstRoom"
+	n := roomName{Name: name}
+	room := createRoom(h, "firstRoom")
+	go room.start()
+	h.listRooms()
+	res, err := json.Marshal(n)
+	if err != nil {
+		fmt.Fprintf(w, "Error: %s", err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(res)
+}
+
+func (h *Hub) listRoomsAndClients(w http.ResponseWriter, r *http.Request) {
+	h.listRooms()
+	for k := range h.rooms {
+		k.listClients()
+	}
 }
 
 func main() {
-	flag.Parse()
-	tpl := template.Must(template.ParseFiles("index.html"))
-	h := newHub()
-	router := http.NewServeMux()
-	router.Handle("/", homeHandler(tpl))
-	router.Handle("/wakeup", wakeUp())
-	router.Handle("/ws", wsHandler{h: h})
-	log.Printf("serving on port 3000")
-	log.Fatal(http.ListenAndServe(":3000", router))
+	h := HubHandler{hub: newHub()}
+	go h.hub.run()
+	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir("./static")))
+	mux.HandleFunc("/wakeup", wakeUp)
+	mux.HandleFunc("/generateRoom", h.hub.generateRoom)
+	mux.HandleFunc("/listRoomsAndClients", h.hub.listRoomsAndClients)
+	mux.HandleFunc("/joinRoom", func(w http.ResponseWriter, r *http.Request) {
+		joinRoom(h.hub, "firstRoom", "Will", w, r)
+		fmt.Println("joined room")
+	})
+	handler := cors.AllowAll().Handler(mux)
+	err := http.ListenAndServe(":8080", handler)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
-func homeHandler(tpl *template.Template) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tpl.Execute(w, r)
-	})
+func wakeUp(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("API is up and running"))
 }
 
-func wakeUp() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(2000)
-		w.Write([]byte("API is up and running"))
-	})
+type roomName struct {
+	Name string `json:"roomName"`
 }
