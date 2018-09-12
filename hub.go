@@ -7,7 +7,7 @@ import (
 // Hub maintains the set of active rooms.
 type Hub struct {
 	// Registered rooms.
-	rooms map[*Room]bool
+	rooms map[string]*Room
 
 	// Register requests from the rooms.
 	register chan *Room
@@ -20,7 +20,7 @@ func newHub() *Hub {
 	return &Hub{
 		register:   make(chan *Room),
 		unregister: make(chan *Room),
-		rooms:      make(map[*Room]bool),
+		rooms:      make(map[string]*Room),
 	}
 }
 
@@ -28,10 +28,10 @@ func (h *Hub) run() {
 	for {
 		select {
 		case room := <-h.register:
-			h.rooms[room] = true
+			h.rooms[room.name] = room
 		case room := <-h.unregister:
-			if _, ok := h.rooms[room]; ok {
-				delete(h.rooms, room)
+			if _, ok := h.rooms[room.name]; ok {
+				delete(h.rooms, room.name)
 			}
 		}
 	}

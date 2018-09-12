@@ -17,9 +17,8 @@ type HubHandler struct {
 }
 
 func (h *Hub) generateRoom(w http.ResponseWriter, r *http.Request) {
-	name := "firstRoom"
-	n := roomName{Name: name}
-	room := createRoom(h, "firstRoom")
+	room := createRoom(h)
+	n := roomName{Name: room.name}
 	go room.start()
 	h.listRooms()
 	res, err := json.Marshal(n)
@@ -32,8 +31,8 @@ func (h *Hub) generateRoom(w http.ResponseWriter, r *http.Request) {
 
 func (h *Hub) listRoomsAndClients(w http.ResponseWriter, r *http.Request) {
 	h.listRooms()
-	for k := range h.rooms {
-		k.listClients()
+	for _, v := range h.rooms {
+		v.listClients()
 	}
 }
 
@@ -46,7 +45,11 @@ func main() {
 	mux.HandleFunc("/generateRoom", h.hub.generateRoom)
 	mux.HandleFunc("/listRoomsAndClients", h.hub.listRoomsAndClients)
 	mux.HandleFunc("/joinRoom", func(w http.ResponseWriter, r *http.Request) {
-		joinRoom(h.hub, "firstRoom", "Will", w, r)
+		roomName := r.URL.Query().Get("room")
+		playerName := r.URL.Query().Get("name")
+		fmt.Println("roomName", roomName)
+		fmt.Println("playerName", playerName)
+		joinRoom(h.hub, roomName, playerName, w, r)
 		fmt.Println("joined room")
 	})
 	handler := cors.AllowAll().Handler(mux)

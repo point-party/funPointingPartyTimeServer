@@ -148,9 +148,9 @@ func joinRoom(hub *Hub, roomName string, clientName string, w http.ResponseWrite
 
 func findRoom(hub *Hub, name string) (*Room, error) {
 	var room *Room
-	for k := range hub.rooms {
-		if k.name == name {
-			room = k
+	for k, v := range hub.rooms {
+		if k == name {
+			room = v
 		}
 		return room, nil
 	}

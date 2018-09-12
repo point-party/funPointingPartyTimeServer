@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
 
 // Room will be the place clients use to create a pointing session.
 type Room struct {
@@ -23,13 +27,13 @@ type Room struct {
 }
 
 // createRoom creates a new room and registers it with the hub.
-func createRoom(hub *Hub, name string) *Room {
+func createRoom(hub *Hub) *Room {
 	room := &Room{
 		hub:        hub,
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		name:       name,
+		name:       createRoomName(),
 		broadcast:  make(chan []byte),
 	}
 	room.hub.register <- room
@@ -62,4 +66,21 @@ func (r *Room) listClients() {
 	for k := range r.clients {
 		fmt.Println("Clients", k)
 	}
+}
+
+// Logic to create random room name
+const charset = "abcdefghijklmnopqrstuvwxyz"
+
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func stringWithCharset(length int, charset string) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func createRoomName() string {
+	return stringWithCharset(6, charset)
 }
