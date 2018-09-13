@@ -1,8 +1,4 @@
-// Copyright 2013 The Gorilla WebSocket Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-package main
+package socketroom
 
 import (
 	"bytes"
@@ -126,8 +122,8 @@ func (c *Client) writePump() {
 	}
 }
 
-// serveWs handles websocket requests from the peer.
-func joinRoom(hub *Hub, roomName string, clientName string, w http.ResponseWriter, r *http.Request) {
+// JoinRoom handles inserting a client into a room and upgrading to WS.
+func JoinRoom(hub *Hub, roomName string, clientName string, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)

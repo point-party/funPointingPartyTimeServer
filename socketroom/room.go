@@ -1,4 +1,4 @@
-package main
+package socketroom
 
 import (
 	"fmt"
@@ -26,8 +26,13 @@ type Room struct {
 	name string
 }
 
-// createRoom creates a new room and registers it with the hub.
-func createRoom(hub *Hub) *Room {
+// RoomName contains the name in json format to send to the client.
+type RoomName struct {
+	Name string `json:"roomName"`
+}
+
+// CreateRoom creates a new room and registers it with the hub.
+func CreateRoom(hub *Hub) *Room {
 	room := &Room{
 		hub:        hub,
 		clients:    make(map[*Client]bool),
