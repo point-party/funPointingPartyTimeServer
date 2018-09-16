@@ -1,7 +1,6 @@
 package socketroom
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,12 +20,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
-)
-
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
+	maxMessageSize = 1024
 )
 
 var upgrader = &websocket.Upgrader{
@@ -37,17 +31,22 @@ var upgrader = &websocket.Upgrader{
 	},
 }
 
+// GameMessage will be the json structure used to communicate
+type GameMessage struct {
+	Event string `json:"event"`
+	Name  string `json:"name"`
+	Point int    `json:"point"`
+}
+
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	room *Room
-
-	name string
-
+	room     *Room
+	name     string
+	observer bool
 	// The websocket connection.
 	conn *websocket.Conn
-
 	// Buffered channel of outbound messages.
-	send chan []byte
+	send chan GameMessage
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -64,15 +63,18 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		var gameMessage GameMessage
+		err := c.conn.ReadJSON(&gameMessage)
+		if err != nil {
+			log.Printf("error getting json message: %v", err)
+		}
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.room.broadcast <- message
+		c.room.broadcast <- gameMessage
 	}
 }
 
@@ -89,30 +91,19 @@ func (c *Client) writePump() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
+		case gameMessage, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
+			err := c.conn.WriteJSON(gameMessage)
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				return
-			}
-			w.Write(message)
-
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
+				log.Printf("could not send json correctly: %v", err)
 			}
 
-			if err := w.Close(); err != nil {
-				return
-			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -123,7 +114,7 @@ func (c *Client) writePump() {
 }
 
 // JoinRoom handles inserting a client into a room and upgrading to WS.
-func JoinRoom(hub *Hub, roomName string, clientName string, w http.ResponseWriter, r *http.Request) {
+func JoinRoom(hub *Hub, roomName string, clientName string, observer string, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -133,7 +124,14 @@ func JoinRoom(hub *Hub, roomName string, clientName string, w http.ResponseWrite
 	if err != nil {
 		fmt.Println(err)
 	}
-	client := &Client{room: room, conn: conn, name: clientName, send: make(chan []byte, 256)}
+	client := &Client{
+		room:     room,
+		conn:     conn,
+		name:     clientName,
+		observer: determineObserver(observer),
+		send:     make(chan GameMessage),
+	}
+
 	client.room.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
@@ -151,4 +149,11 @@ func findRoom(hub *Hub, name string) (*Room, error) {
 		return room, nil
 	}
 	return nil, fmt.Errorf("Could not find room")
+}
+
+func determineObserver(observer string) bool {
+	if observer == "true" {
+		return true
+	}
+	return false
 }

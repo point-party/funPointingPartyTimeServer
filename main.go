@@ -20,9 +20,11 @@ func main() {
 	mux.HandleFunc("/joinRoom", func(w http.ResponseWriter, r *http.Request) {
 		roomName := r.URL.Query().Get("room")
 		playerName := r.URL.Query().Get("name")
+		observer := r.URL.Query().Get("observer")
 		fmt.Println("roomName", roomName)
 		fmt.Println("playerName", playerName)
-		socketroom.JoinRoom(h, roomName, playerName, w, r)
+		fmt.Println("observer", observer)
+		socketroom.JoinRoom(h, roomName, playerName, observer, w, r)
 		fmt.Println("joined room")
 	})
 	handler := cors.AllowAll().Handler(mux)
