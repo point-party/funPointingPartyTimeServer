@@ -40,8 +40,8 @@ type GameMessage struct {
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	room     *Room
-	name     string
+	Room     *Room
+	Name     string
 	observer bool
 	// The websocket connection.
 	conn *websocket.Conn
@@ -56,7 +56,7 @@ type Client struct {
 // reads from this goroutine.
 func (c *Client) readPump() {
 	defer func() {
-		c.room.unregister <- c
+		c.Room.unregister <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -74,7 +74,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.room.broadcast <- gameMessage
+		c.Room.broadcast <- gameMessage
 	}
 }
 
@@ -125,14 +125,14 @@ func JoinRoom(hub *Hub, roomName string, clientName string, observer string, w h
 		fmt.Println(err)
 	}
 	client := &Client{
-		room:     room,
+		Room:     room,
 		conn:     conn,
-		name:     clientName,
+		Name:     clientName,
 		observer: determineObserver(observer),
 		send:     make(chan GameMessage),
 	}
 
-	client.room.register <- client
+	client.Room.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
@@ -142,7 +142,7 @@ func JoinRoom(hub *Hub, roomName string, clientName string, observer string, w h
 
 func findRoom(hub *Hub, name string) (*Room, error) {
 	var room *Room
-	for k, v := range hub.rooms {
+	for k, v := range hub.Rooms {
 		if k == name {
 			room = v
 		}

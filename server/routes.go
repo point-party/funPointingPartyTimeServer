@@ -2,6 +2,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"funPointingPartyTime/socketroom"
 	"net/http"
@@ -18,7 +19,7 @@ func (s *Server) Routes() {
 	go h.Run()
 	s.Router.Handle("/", http.FileServer(http.Dir("./static")))
 	s.Router.HandleFunc("/wakeup", s.wakeup())
-	s.Router.HandleFunc("/generateRoom", h.GenerateRoom())
+	s.Router.HandleFunc("/generateRoom", s.generateRoom(h))
 	s.Router.HandleFunc("/listRoomsAndClients", h.ListRoomsAndClients())
 	s.Router.HandleFunc("/joinRoom", s.joinRoom(h))
 }
@@ -41,5 +42,32 @@ func (s *Server) joinRoom(h *socketroom.Hub) http.HandlerFunc {
 		fmt.Println("observer", observer)
 		socketroom.JoinRoom(h, roomName, playerName, observer, w, r)
 		fmt.Println("joined room")
+	}
+}
+
+func (s *Server) generateRoom(h *socketroom.Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		room := socketroom.CreateRoom(h)
+		n := socketroom.RoomName{Name: room.Name}
+		go room.Start()
+		h.ListRooms()
+		res, err := json.Marshal(n)
+		if err != nil {
+			fmt.Fprintf(w, "Error: %s", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(res)
+	}
+}
+
+//ListRoomsAndClients is a helper endpoint that lists all rooms registerd with the hub and all the clients registered in the rooms.
+func (s *Server) ListRoomsAndClients(h *socketroom.Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.ListRooms()
+		for _, v := range h.Rooms {
+			v.ListClients()
+		}
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("Done"))
 	}
 }

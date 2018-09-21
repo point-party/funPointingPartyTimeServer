@@ -23,7 +23,7 @@ type Room struct {
 	// Unregister requests from clients.
 	unregister chan *Client
 
-	name string
+	Name string
 }
 
 // RoomName contains the name in json format to send to the client.
@@ -38,14 +38,15 @@ func CreateRoom(hub *Hub) *Room {
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		name:       createRoomName(),
+		Name:       createRoomName(),
 		broadcast:  make(chan GameMessage),
 	}
 	room.hub.register <- room
 	return room
 }
 
-func (r *Room) start() {
+// Start begins the goroutine and channels for the room
+func (r *Room) Start() {
 	for {
 		select {
 		case client := <-r.register:
@@ -67,7 +68,8 @@ func (r *Room) start() {
 	}
 }
 
-func (r *Room) listClients() {
+// ListClients prints to console the clients in the room
+func (r *Room) ListClients() {
 	for k := range r.clients {
 		fmt.Println("Clients", k)
 	}

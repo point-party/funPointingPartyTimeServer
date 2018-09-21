@@ -2,7 +2,6 @@
 package socketroom
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -10,7 +9,7 @@ import (
 // Hub maintains the set of active rooms.
 type Hub struct {
 	// Registered rooms.
-	rooms map[string]*Room
+	Rooms map[string]*Room
 
 	// Register requests from the rooms.
 	register chan *Room
@@ -24,7 +23,7 @@ func NewHub() *Hub {
 	return &Hub{
 		register:   make(chan *Room),
 		unregister: make(chan *Room),
-		rooms:      make(map[string]*Room),
+		Rooms:      make(map[string]*Room),
 	}
 }
 
@@ -33,10 +32,10 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case room := <-h.register:
-			h.rooms[room.name] = room
+			h.Rooms[room.Name] = room
 		case room := <-h.unregister:
-			if _, ok := h.rooms[room.name]; ok {
-				delete(h.rooms, room.name)
+			if _, ok := h.Rooms[room.Name]; ok {
+				delete(h.Rooms, room.Name)
 			}
 		}
 	}
@@ -44,24 +43,8 @@ func (h *Hub) Run() {
 
 // ListRooms is a helper function to print what rooms are currently registered with the hub.
 func (h *Hub) ListRooms() {
-	for k := range h.rooms {
+	for k := range h.Rooms {
 		fmt.Println("Rooms", k)
-	}
-}
-
-// GenerateRoom creates a new room and returns the room name to the client.
-func (h *Hub) GenerateRoom() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		room := CreateRoom(h)
-		n := RoomName{Name: room.name}
-		go room.start()
-		h.ListRooms()
-		res, err := json.Marshal(n)
-		if err != nil {
-			fmt.Fprintf(w, "Error: %s", err)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(res)
 	}
 }
 
@@ -69,8 +52,8 @@ func (h *Hub) GenerateRoom() http.HandlerFunc {
 func (h *Hub) ListRoomsAndClients() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		h.ListRooms()
-		for _, v := range h.rooms {
-			v.listClients()
+		for _, v := range h.Rooms {
+			v.ListClients()
 		}
 		w.Write([]byte{})
 	}
