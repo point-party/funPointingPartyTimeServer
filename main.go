@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"funPointingPartyTime/socketroom"
+	"funPointingPartyTime/server"
 	"log"
 	"net/http"
 
@@ -10,32 +9,11 @@ import (
 )
 
 func main() {
-	h := socketroom.NewHub()
-	go h.Run()
-	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir("./static")))
-	mux.HandleFunc("/wakeup", wakeUp)
-	mux.HandleFunc("/generateRoom", h.GenerateRoom)
-	mux.HandleFunc("/listRoomsAndClients", h.ListRoomsAndClients)
-	mux.HandleFunc("/joinRoom", func(w http.ResponseWriter, r *http.Request) {
-		roomName := r.URL.Query().Get("room")
-		playerName := r.URL.Query().Get("name")
-		observer := r.URL.Query().Get("observer")
-		fmt.Println("roomName", roomName)
-		fmt.Println("playerName", playerName)
-		fmt.Println("observer", observer)
-		socketroom.JoinRoom(h, roomName, playerName, observer, w, r)
-		fmt.Println("joined room")
-	})
-	handler := cors.AllowAll().Handler(mux)
+	s := server.Server{Router: http.NewServeMux()}
+	handler := cors.AllowAll().Handler(s.Router)
+	s.Routes()
 	err := http.ListenAndServe(":8080", handler)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
-}
-
-func wakeUp(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("API is up and running"))
 }

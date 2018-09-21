@@ -50,23 +50,28 @@ func (h *Hub) ListRooms() {
 }
 
 // GenerateRoom creates a new room and returns the room name to the client.
-func (h *Hub) GenerateRoom(w http.ResponseWriter, r *http.Request) {
-	room := CreateRoom(h)
-	n := RoomName{Name: room.name}
-	go room.start()
-	h.ListRooms()
-	res, err := json.Marshal(n)
-	if err != nil {
-		fmt.Fprintf(w, "Error: %s", err)
+func (h *Hub) GenerateRoom() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		room := CreateRoom(h)
+		n := RoomName{Name: room.name}
+		go room.start()
+		h.ListRooms()
+		res, err := json.Marshal(n)
+		if err != nil {
+			fmt.Fprintf(w, "Error: %s", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(res)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(res)
 }
 
 //ListRoomsAndClients is a helper endpoint that lists all rooms registerd with the hub and all the clients registered in the rooms.
-func (h *Hub) ListRoomsAndClients(w http.ResponseWriter, r *http.Request) {
-	h.ListRooms()
-	for _, v := range h.rooms {
-		v.listClients()
+func (h *Hub) ListRoomsAndClients() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.ListRooms()
+		for _, v := range h.rooms {
+			v.listClients()
+		}
+		w.Write([]byte{})
 	}
 }
