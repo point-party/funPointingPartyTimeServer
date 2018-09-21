@@ -20,7 +20,7 @@ func (s *Server) Routes() {
 	s.Router.Handle("/", http.FileServer(http.Dir("./static")))
 	s.Router.HandleFunc("/wakeup", s.wakeup())
 	s.Router.HandleFunc("/generateRoom", s.generateRoom(h))
-	s.Router.HandleFunc("/listRoomsAndClients", h.ListRoomsAndClients())
+	s.Router.HandleFunc("/listRoomsAndClients", s.listRoomsAndClients(h))
 	s.Router.HandleFunc("/joinRoom", s.joinRoom(h))
 }
 
@@ -60,8 +60,7 @@ func (s *Server) generateRoom(h *socketroom.Hub) http.HandlerFunc {
 	}
 }
 
-//ListRoomsAndClients is a helper endpoint that lists all rooms registerd with the hub and all the clients registered in the rooms.
-func (s *Server) ListRoomsAndClients(h *socketroom.Hub) http.HandlerFunc {
+func (s *Server) listRoomsAndClients(h *socketroom.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		h.ListRooms()
 		for _, v := range h.Rooms {
