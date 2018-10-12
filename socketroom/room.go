@@ -45,17 +45,45 @@ func CreateRoom(hub *Hub) *Room {
 	return room
 }
 
+func (r *Room) sendPlayers() []PlayerStatus {
+	var ps []PlayerStatus
+	for p := range r.clients {
+		value := PlayerStatus{p.Name, p.CurrentPoint}
+		ps = append(ps, value)
+	}
+	return ps
+}
+
 // Start begins the goroutine and channels for the room
 func (r *Room) Start() {
 	for {
 		select {
 		case client := <-r.register:
 			r.clients[client] = true
+			fmt.Println("registered with room", client.Name)
+			joinMsg := GameMessage{
+				Event:   "someone joined",
+				Name:    client.Name,
+				Point:   "",
+				Players: r.sendPlayers(),
+			}
+			for client := range r.clients {
+				client.send <- joinMsg
+			}
+
 		case client := <-r.unregister:
 			if _, ok := r.clients[client]; ok {
 				delete(r.clients, client)
+
 			}
 		case gameMessage := <-r.broadcast:
+			fmt.Println("GameMessage", gameMessage)
+			// var gm GameMessage
+			// err := json.Unmarshal(gameMessage, &gm)
+			if gameMessage.Event == "voted" {
+				r.updateVote(gameMessage.Name, gameMessage.Point)
+				// find player update their point with point.
+			}
 			for client := range r.clients {
 				select {
 				case client.send <- gameMessage:
@@ -64,6 +92,14 @@ func (r *Room) Start() {
 					delete(r.clients, client)
 				}
 			}
+		}
+	}
+}
+
+func (r *Room) updateVote(name string, point string) {
+	for c := range r.clients {
+		if c.Name == name {
+			c.CurrentPoint = point
 		}
 	}
 }

@@ -31,11 +31,9 @@ var upgrader = &websocket.Upgrader{
 	},
 }
 
-// GameMessage will be the json structure used to communicate
-type GameMessage struct {
-	Event string `json:"event"`
+type PlayerStatus struct {
 	Name  string `json:"name"`
-	Point int    `json:"point"`
+	Point string `json:"point"`
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -46,7 +44,16 @@ type Client struct {
 	// The websocket connection.
 	conn *websocket.Conn
 	// Buffered channel of outbound messages.
-	send chan GameMessage
+	send         chan GameMessage
+	CurrentPoint string
+}
+
+// GameMessage will be the json structure used to communicate
+type GameMessage struct {
+	Event   string         `json:"event"`
+	Name    string         `json:"name"`
+	Point   string         `json:"point"`
+	Players []PlayerStatus `json:"players"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -64,8 +71,10 @@ func (c *Client) readPump() {
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		var gameMessage GameMessage
+		fmt.Println("gameMessage", gameMessage)
 		err := c.conn.ReadJSON(&gameMessage)
 		if err != nil {
+			fmt.Println("REALLY ENCOUNTERED AN ERROR")
 			log.Printf("error getting json message: %v", err)
 		}
 		if err != nil {
