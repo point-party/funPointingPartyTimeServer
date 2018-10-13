@@ -26,11 +26,6 @@ type Room struct {
 	Name string
 }
 
-// RoomName contains the name in json format to send to the client.
-type RoomName struct {
-	Name string `json:"roomName"`
-}
-
 // CreateRoom creates a new room and registers it with the hub.
 func CreateRoom(hub *Hub) *Room {
 	room := &Room{
@@ -62,10 +57,10 @@ func (r *Room) Start() {
 			r.clients[client] = true
 			fmt.Println("registered with room", client.Name)
 			joinMsg := GameMessage{
-				Event:   "someone joined",
-				Name:    client.Name,
-				Point:   "",
-				Players: r.sendPlayers(),
+				Event: joinRoom,
+				Payload: PlayerUpdate{
+					Players: r.sendPlayers(),
+				},
 			}
 			for client := range r.clients {
 				client.send <- joinMsg
@@ -76,14 +71,20 @@ func (r *Room) Start() {
 				delete(r.clients, client)
 
 			}
-		case gameMessage := <-r.broadcast:
-			fmt.Println("GameMessage", gameMessage)
-			// var gm GameMessage
-			// err := json.Unmarshal(gameMessage, &gm)
-			if gameMessage.Event == "voted" {
-				r.updateVote(gameMessage.Name, gameMessage.Point)
-				// find player update their point with point.
+			exitMsg := GameMessage{
+				Event: leaveRoom,
+				Payload: PlayerStatus{
+					Name:  client.Name,
+					Point: "",
+				},
 			}
+			client.send <- exitMsg
+		case gameMessage := <-r.broadcast:
+			// DECODE JSON here into different stuff -> decide actions
+			// if gameMessage.Event == voted {
+			// 	fmt.Println("whattt uppppp", gameMessage)
+			// 	r.updateVote(gameMessage.Payload.["name"], gameMessage.Payload["point"])
+			// }
 			for client := range r.clients {
 				select {
 				case client.send <- gameMessage:

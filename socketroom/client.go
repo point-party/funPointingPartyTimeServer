@@ -1,6 +1,7 @@
 package socketroom
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,11 +32,6 @@ var upgrader = &websocket.Upgrader{
 	},
 }
 
-type PlayerStatus struct {
-	Name  string `json:"name"`
-	Point string `json:"point"`
-}
-
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	Room     *Room
@@ -46,14 +42,6 @@ type Client struct {
 	// Buffered channel of outbound messages.
 	send         chan GameMessage
 	CurrentPoint string
-}
-
-// GameMessage will be the json structure used to communicate
-type GameMessage struct {
-	Event   string         `json:"event"`
-	Name    string         `json:"name"`
-	Point   string         `json:"point"`
-	Players []PlayerStatus `json:"players"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -70,9 +58,25 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		var gameMessage GameMessage
-		fmt.Println("gameMessage", gameMessage)
+		var msg json.RawMessage
+		gameMessage := GameMessage{
+			Payload: &msg,
+		}
+
 		err := c.conn.ReadJSON(&gameMessage)
+		fmt.Println("gameMessage", gameMessage)
+		switch gameMessage.Event {
+		case voted:
+			var ps PlayerStatus
+			if err := json.Unmarshal(msg, &ps); err != nil {
+				log.Fatal(err)
+			}
+			// Neeed to move this logic into a server Reducer.
+			// (Wish it was in room, but has to happen at point of contact with json)
+			c.Room.updateVote(ps.Name, ps.Point)
+		default:
+			fmt.Println("not recognized doing nothing")
+		}
 		if err != nil {
 			fmt.Println("REALLY ENCOUNTERED AN ERROR")
 			log.Printf("error getting json message: %v", err)
@@ -101,6 +105,7 @@ func (c *Client) writePump() {
 	for {
 		select {
 		case gameMessage, ok := <-c.send:
+			fmt.Println("How does this work???", gameMessage)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
