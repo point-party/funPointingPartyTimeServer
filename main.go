@@ -1,7 +1,7 @@
 package main
 
 import (
-	"funPointingPartyTime/server"
+	"funPointingPartyTimeServer/server"
 	"log"
 	"net/http"
 
