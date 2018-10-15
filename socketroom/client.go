@@ -65,18 +65,7 @@ func (c *Client) readPump() {
 
 		err := c.conn.ReadJSON(&gameMessage)
 		fmt.Println("gameMessage", gameMessage)
-		switch gameMessage.Event {
-		case voted:
-			var ps PlayerStatus
-			if err := json.Unmarshal(msg, &ps); err != nil {
-				log.Fatal(err)
-			}
-			// Neeed to move this logic into a server Reducer.
-			// (Wish it was in room, but has to happen at point of contact with json)
-			c.Room.updateVote(ps.Name, ps.Point)
-		default:
-			fmt.Println("not recognized doing nothing")
-		}
+		determineGameAction(c, &gameMessage, msg)
 		if err != nil {
 			fmt.Println("REALLY ENCOUNTERED AN ERROR")
 			log.Printf("error getting json message: %v", err)
