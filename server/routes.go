@@ -4,7 +4,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"funPointingPartyTime/socketroom"
+	"funPointingPartyTimeServer/socketroom"
 	"net/http"
 )
 
