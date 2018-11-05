@@ -112,6 +112,13 @@ func (r *Room) ListClients() {
 	}
 }
 
+func (r *Room) clearPoints() {
+	for c := range r.clients {
+		c.CurrentPoint = ""
+	}
+	fmt.Println("All points cleared")
+}
+
 // Logic to create random room name
 const charset = "abcdefghijklmnopqrstuvwxyz"
 

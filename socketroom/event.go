@@ -16,6 +16,11 @@ func determineGameAction(c *Client, gm *GameMessage, content json.RawMessage) {
 			log.Fatal(err)
 		}
 		c.Room.updateVote(ps.Name, ps.Point)
+	case clearPoints:
+		fmt.Println("In clear points case")
+		c.Room.clearPoints()
+	case revealPoints:
+		fmt.Println("In reveal case")
 	default:
 		fmt.Println("Did not match any known game events. No action taken.")
 	}
