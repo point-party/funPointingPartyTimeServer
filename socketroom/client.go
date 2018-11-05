@@ -62,14 +62,9 @@ func (c *Client) readPump() {
 		gameMessage := GameMessage{
 			Payload: &msg,
 		}
-
 		err := c.conn.ReadJSON(&gameMessage)
 		fmt.Println("gameMessage", gameMessage)
 		determineGameAction(c, &gameMessage, msg)
-		if err != nil {
-			fmt.Println("REALLY ENCOUNTERED AN ERROR")
-			log.Printf("error getting json message: %v", err)
-		}
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -120,12 +115,13 @@ func (c *Client) writePump() {
 func JoinRoom(hub *Hub, roomName string, clientName string, observer string, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		fmt.Printf("Error during connection upgrade: %e", err)
 		return
 	}
 	room, err := findRoom(hub, roomName)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error finding room: %e", err)
+		return
 	}
 	client := &Client{
 		Room:     room,
@@ -148,8 +144,8 @@ func findRoom(hub *Hub, name string) (*Room, error) {
 	for k, v := range hub.Rooms {
 		if k == name {
 			room = v
+			return room, nil
 		}
-		return room, nil
 	}
 	return nil, fmt.Errorf("Could not find room")
 }
