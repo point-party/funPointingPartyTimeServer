@@ -43,7 +43,7 @@ func CreateRoom(hub *Hub) *Room {
 func (r *Room) sendPlayers() []PlayerStatus {
 	var ps []PlayerStatus
 	for p := range r.clients {
-		value := PlayerStatus{p.Name, p.CurrentPoint}
+		value := PlayerStatus{p.Name, p.CurrentPoint, p.ID}
 		ps = append(ps, value)
 	}
 	return ps
@@ -73,12 +73,13 @@ func (r *Room) Start() {
 			}
 			exitMsg := GameMessage{
 				Event: leaveRoom,
-				Payload: PlayerStatus{
-					Name:  client.Name,
-					Point: "",
+				Payload: PlayerUpdate{
+					Players: r.sendPlayers(),
 				},
 			}
-			client.send <- exitMsg
+			for client := range r.clients {
+				client.send <- exitMsg
+			}
 		case gameMessage := <-r.broadcast:
 			// DECODE JSON here into different stuff -> decide actions
 			// if gameMessage.Event == voted {
@@ -97,9 +98,9 @@ func (r *Room) Start() {
 	}
 }
 
-func (r *Room) updateVote(name string, point string) {
+func (r *Room) updateVote(point string, id string) {
 	for c := range r.clients {
-		if c.Name == name {
+		if c.ID == id {
 			c.CurrentPoint = point
 		}
 	}

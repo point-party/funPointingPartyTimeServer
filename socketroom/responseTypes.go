@@ -20,6 +20,7 @@ type PlayerUpdate struct {
 type PlayerStatus struct {
 	Name  string `json:"name"`
 	Point string `json:"point"`
+	ID    string `json:"id"`
 }
 
 // GAME CONSTANTS

@@ -15,7 +15,7 @@ func determineGameAction(c *Client, gm *GameMessage, content json.RawMessage) {
 		if err := json.Unmarshal(content, &ps); err != nil {
 			log.Fatal(err)
 		}
-		c.Room.updateVote(ps.Name, ps.Point)
+		c.Room.updateVote(ps.Point, ps.ID)
 	case clearPoints:
 		fmt.Println("In clear points case")
 		c.Room.clearPoints()

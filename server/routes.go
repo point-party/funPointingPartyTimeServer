@@ -37,8 +37,8 @@ func (s *Server) joinRoom(h *socketroom.Hub) http.HandlerFunc {
 		roomName := r.URL.Query().Get("room")
 		playerName := r.URL.Query().Get("name")
 		observer := r.URL.Query().Get("observer")
-		fmt.Println("roomName", roomName)
-		socketroom.JoinRoom(h, roomName, playerName, observer, w, r)
+		id := r.URL.Query().Get("id")
+		socketroom.JoinRoom(h, roomName, playerName, observer, id, w, r)
 		fmt.Println("joined room")
 	}
 }

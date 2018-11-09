@@ -42,6 +42,7 @@ type Client struct {
 	// Buffered channel of outbound messages.
 	send         chan GameMessage
 	CurrentPoint string
+	ID           string
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -112,7 +113,7 @@ func (c *Client) writePump() {
 }
 
 // JoinRoom handles inserting a client into a room and upgrading to WS.
-func JoinRoom(hub *Hub, roomName string, clientName string, observer string, w http.ResponseWriter, r *http.Request) {
+func JoinRoom(hub *Hub, roomName string, clientName string, observer string, id string, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Printf("Error during connection upgrade: %e", err)
@@ -129,6 +130,7 @@ func JoinRoom(hub *Hub, roomName string, clientName string, observer string, w h
 		Name:     clientName,
 		observer: determineObserver(observer),
 		send:     make(chan GameMessage),
+		ID:       id,
 	}
 
 	client.Room.register <- client
