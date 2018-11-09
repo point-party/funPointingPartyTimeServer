@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "qWSfv6nFxKXv9aIvOB/A+oJ47a8=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "4ac909741dfa57448bfadfdbca0cf7eeaa68f0e2",
+			"revisionTime": "2018-02-01T01:52:56Z"
+		},
+		{
+			"checksumSHA1": "U8v4SPQEKgQf0STg/o5DkKqAkMw=",
+			"path": "github.com/rs/cors",
+			"revision": "feef513b9575b32f84bafa580aad89b011259019",
+			"revisionTime": "2018-01-23T07:30:48Z"
+		}
+	],
+	"rootPath": "funPointingPartyTimeServer"
+}
