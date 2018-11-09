@@ -121,7 +121,7 @@ func (r *Room) clearPoints() {
 }
 
 // Logic to create random room name
-const charset = "abcdefghijklmnopqrstuvwxyz"
+const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
