@@ -89,7 +89,6 @@ func (r *Room) Start() {
 				client.send <- exitMsg
 			}
 		case gameMessage := <-r.broadcast:
-			// DECODE JSON here into different stuff -> decide actions
 			for client := range r.clients {
 				select {
 				case client.send <- gameMessage:
@@ -109,11 +108,26 @@ func (r *Room) Start() {
 }
 
 func (r *Room) updateVote(point string, id string) {
+	clientsVoted := 0
 	for c := range r.clients {
 		if c.ID == id {
 			c.CurrentPoint = point
 		}
 	}
+	for c := range r.clients {
+		if c.CurrentPoint == "" {
+			break
+		}
+		clientsVoted++
+	}
+	if clientsVoted == len(r.clients) {
+		fmt.Println("All clients voted")
+		msg := GameMessage{Event: revealPoints}
+		for c := range r.clients {
+			c.send <- msg
+		}
+	}
+
 }
 
 // ListClients prints to console the clients in the room

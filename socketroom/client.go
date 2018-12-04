@@ -64,8 +64,6 @@ func (c *Client) readPump() {
 			Payload: &msg,
 		}
 		err := c.conn.ReadJSON(&gameMessage)
-		fmt.Println("gameMessage", gameMessage)
-		determineGameAction(c, &gameMessage, msg)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -73,6 +71,8 @@ func (c *Client) readPump() {
 			break
 		}
 		c.Room.broadcast <- gameMessage
+		determineGameAction(c, &gameMessage, msg)
+
 	}
 }
 
