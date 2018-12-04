@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type voteEvent struct {
+	point string
+	id    string
+}
+
 // Room will be the place clients use to create a pointing session.
 type Room struct {
 	// The Hub handles all rooms.
@@ -24,6 +29,9 @@ type Room struct {
 	unregister chan *Client
 
 	Name string
+
+	vote  chan voteEvent
+	clear chan bool
 }
 
 // CreateRoom creates a new room and registers it with the hub.
@@ -35,6 +43,8 @@ func CreateRoom(hub *Hub) *Room {
 		unregister: make(chan *Client),
 		Name:       createRoomName(),
 		broadcast:  make(chan GameMessage),
+		vote:       make(chan voteEvent),
+		clear:      make(chan bool),
 	}
 	room.hub.register <- room
 	return room
@@ -67,10 +77,8 @@ func (r *Room) Start() {
 			}
 
 		case client := <-r.unregister:
-			if _, ok := r.clients[client]; ok {
-				delete(r.clients, client)
-
-			}
+			delete(r.clients, client)
+			close(client.send)
 			exitMsg := GameMessage{
 				Event: leaveRoom,
 				Payload: PlayerUpdate{
@@ -82,10 +90,6 @@ func (r *Room) Start() {
 			}
 		case gameMessage := <-r.broadcast:
 			// DECODE JSON here into different stuff -> decide actions
-			// if gameMessage.Event == voted {
-			// 	fmt.Println("whattt uppppp", gameMessage)
-			// 	r.updateVote(gameMessage.Payload.["name"], gameMessage.Payload["point"])
-			// }
 			for client := range r.clients {
 				select {
 				case client.send <- gameMessage:
@@ -93,6 +97,12 @@ func (r *Room) Start() {
 					close(client.send)
 					delete(r.clients, client)
 				}
+			}
+		case voteEvent := <-r.vote:
+			r.updateVote(voteEvent.point, voteEvent.id)
+		case clear := <-r.clear:
+			if clear {
+				r.clearPoints()
 			}
 		}
 	}

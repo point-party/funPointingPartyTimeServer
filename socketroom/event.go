@@ -15,10 +15,10 @@ func determineGameAction(c *Client, gm *GameMessage, content json.RawMessage) {
 		if err := json.Unmarshal(content, &ps); err != nil {
 			log.Fatal(err)
 		}
-		c.Room.updateVote(ps.Point, ps.ID)
+		vote := voteEvent{ps.Point, ps.ID}
+		c.Room.vote <- vote
 	case clearPoints:
-		fmt.Println("In clear points case")
-		c.Room.clearPoints()
+		c.Room.clear <- true
 	case revealPoints:
 		fmt.Println("In reveal case")
 	default:
