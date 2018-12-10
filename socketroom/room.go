@@ -52,12 +52,25 @@ func CreateRoom(hub *Hub) *Room {
 }
 
 func (r *Room) sendPlayers() []PlayerStatus {
-	var ps []PlayerStatus
+	ps := []PlayerStatus{}
 	for p := range r.clients {
-		value := PlayerStatus{p.Name, p.CurrentPoint, p.ID}
-		ps = append(ps, value)
+		if !p.observer {
+			value := PlayerStatus{p.Name, p.CurrentPoint, p.ID}
+			ps = append(ps, value)
+		}
 	}
 	return ps
+}
+
+func (r *Room) sendObservers() []Observer {
+	observers := []Observer{}
+	for c := range r.clients {
+		if c.observer {
+			o := Observer{c.Name, c.ID}
+			observers = append(observers, o)
+		}
+	}
+	return observers
 }
 
 // Start begins the goroutine and channels for the room
@@ -70,7 +83,8 @@ func (r *Room) Start() {
 			joinMsg := GameMessage{
 				Event: joinRoom,
 				Payload: PlayerUpdate{
-					Players: r.sendPlayers(),
+					Players:   r.sendPlayers(),
+					Observers: r.sendObservers(),
 				},
 			}
 			for client := range r.clients {
@@ -83,7 +97,8 @@ func (r *Room) Start() {
 			exitMsg := GameMessage{
 				Event: leaveRoom,
 				Payload: PlayerUpdate{
-					Players: r.sendPlayers(),
+					Players:   r.sendPlayers(),
+					Observers: r.sendObservers(),
 				},
 			}
 			for client := range r.clients {
@@ -107,17 +122,19 @@ func (r *Room) Start() {
 func (r *Room) updateVote(point string, id string) {
 	clientsVoted := 0
 	for c := range r.clients {
-		if c.ID == id {
+		if c.ID == id && !c.observer {
 			c.CurrentPoint = point
 		}
 	}
 	for c := range r.clients {
-		if c.CurrentPoint == "" {
-			break
+		if !c.observer {
+			if c.CurrentPoint == "" {
+				break
+			}
+			clientsVoted++
 		}
-		clientsVoted++
 	}
-	if clientsVoted == len(r.clients) {
+	if clientsVoted == r.countPlayers() {
 		fmt.Println("All clients voted")
 		msg := GameMessage{Event: revealPoints}
 		for c := range r.clients {
@@ -125,6 +142,16 @@ func (r *Room) updateVote(point string, id string) {
 		}
 	}
 
+}
+
+func (r *Room) countPlayers() int {
+	pCount := 0
+	for c := range r.clients {
+		if !c.observer {
+			pCount++
+		}
+	}
+	return pCount
 }
 
 // ListClients prints to console the clients in the room
