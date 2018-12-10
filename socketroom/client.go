@@ -70,9 +70,13 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+		// pass decoded payload -> msg into wrapped GameMessage
+		gameEvent := GameEvent{
+			gameMessage: gameMessage,
+			rawPayload:  msg,
+		}
 		c.Room.broadcast <- gameMessage
-		determineGameAction(c, &gameMessage, msg)
-
+		c.Room.determineGameAction <- gameEvent
 	}
 }
 

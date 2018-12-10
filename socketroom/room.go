@@ -1,15 +1,11 @@
 package socketroom
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"time"
 )
-
-type voteEvent struct {
-	point string
-	id    string
-}
 
 // Room will be the place clients use to create a pointing session.
 type Room struct {
@@ -22,6 +18,9 @@ type Room struct {
 	// Inbound messages from the clients.
 	broadcast chan GameMessage
 
+	// reads raw wrapped GameMessage with decoded payload, for determineGameAction function
+	determineGameAction chan GameEvent
+
 	// Register requests from the clients.
 	register chan *Client
 
@@ -29,22 +28,24 @@ type Room struct {
 	unregister chan *Client
 
 	Name string
+}
 
-	vote  chan voteEvent
-	clear chan bool
+// GameEvent Struct to contain rawPayload for reducer action
+type GameEvent struct {
+	gameMessage GameMessage
+	rawPayload  json.RawMessage
 }
 
 // CreateRoom creates a new room and registers it with the hub.
 func CreateRoom(hub *Hub) *Room {
 	room := &Room{
-		hub:        hub,
-		clients:    make(map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		Name:       createRoomName(),
-		broadcast:  make(chan GameMessage),
-		vote:       make(chan voteEvent),
-		clear:      make(chan bool),
+		hub:                 hub,
+		clients:             make(map[*Client]bool),
+		register:            make(chan *Client),
+		unregister:          make(chan *Client),
+		Name:                createRoomName(),
+		broadcast:           make(chan GameMessage),
+		determineGameAction: make(chan GameEvent),
 	}
 	room.hub.register <- room
 	return room
@@ -88,6 +89,8 @@ func (r *Room) Start() {
 			for client := range r.clients {
 				client.send <- exitMsg
 			}
+		case gameEvent := <-r.determineGameAction:
+			determineGameAction(r, gameEvent.gameMessage, gameEvent.rawPayload)
 		case gameMessage := <-r.broadcast:
 			for client := range r.clients {
 				select {
@@ -96,12 +99,6 @@ func (r *Room) Start() {
 					close(client.send)
 					delete(r.clients, client)
 				}
-			}
-		case voteEvent := <-r.vote:
-			r.updateVote(voteEvent.point, voteEvent.id)
-		case clear := <-r.clear:
-			if clear {
-				r.clearPoints()
 			}
 		}
 	}

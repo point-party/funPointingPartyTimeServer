@@ -8,17 +8,16 @@ import (
 
 // determineGameAction takes in a gameMessage with a json rawMessage in.
 // Using the event type we can determine how to decode it, and what action to take.
-func determineGameAction(c *Client, gm *GameMessage, content json.RawMessage) {
+func determineGameAction(r *Room, gm GameMessage, content json.RawMessage) {
 	switch gm.Event {
 	case voted:
 		var ps PlayerStatus
 		if err := json.Unmarshal(content, &ps); err != nil {
 			log.Fatal(err)
 		}
-		vote := voteEvent{ps.Point, ps.ID}
-		c.Room.vote <- vote
+		r.updateVote(ps.Point, ps.ID)
 	case clearPoints:
-		c.Room.clear <- true
+		r.clearPoints()
 	case revealPoints:
 		fmt.Println("In reveal case")
 	default:
