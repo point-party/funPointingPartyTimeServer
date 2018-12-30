@@ -13,8 +13,9 @@ type GameMessage struct {
 
 // PlayerUpdate contains a list of players and their current point.
 type PlayerUpdate struct {
-	Players   []PlayerStatus `json:"players"`
-	Observers []Observer     `json:"observers"`
+	Players    []PlayerStatus `json:"players"`
+	Observers  []Observer     `json:"observers"`
+	PointScale string         `json:"pointScale"`
 }
 
 // PlayerStatus has list of players and their current points.

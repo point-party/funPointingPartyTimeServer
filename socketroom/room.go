@@ -28,6 +28,9 @@ type Room struct {
 	unregister chan *Client
 
 	Name string
+
+	// scale in which points are voted in, during the session.
+	PointScale string
 }
 
 // GameEvent Struct to contain rawPayload for reducer action
@@ -37,7 +40,8 @@ type GameEvent struct {
 }
 
 // CreateRoom creates a new room and registers it with the hub.
-func CreateRoom(hub *Hub) *Room {
+func CreateRoom(hub *Hub, pS string) *Room {
+	fmt.Println("pS", pS)
 	room := &Room{
 		hub:                 hub,
 		clients:             make(map[*Client]bool),
@@ -46,6 +50,7 @@ func CreateRoom(hub *Hub) *Room {
 		Name:                createRoomName(),
 		broadcast:           make(chan GameMessage),
 		determineGameAction: make(chan GameEvent),
+		PointScale:          pS,
 	}
 	room.hub.register <- room
 	return room
@@ -83,8 +88,9 @@ func (r *Room) Start() {
 			joinMsg := GameMessage{
 				Event: joinRoom,
 				Payload: PlayerUpdate{
-					Players:   r.sendPlayers(),
-					Observers: r.sendObservers(),
+					Players:    r.sendPlayers(),
+					Observers:  r.sendObservers(),
+					PointScale: r.PointScale,
 				},
 			}
 			for client := range r.clients {

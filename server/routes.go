@@ -35,20 +35,22 @@ func (s *Server) wakeup() http.HandlerFunc {
 func (s *Server) joinRoom(h *socketroom.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		roomName := r.URL.Query().Get("room")
+		defer r.Body.Close()
 		playerName := r.URL.Query().Get("name")
-		observer := r.URL.Query().Get("observer")
+		role := r.URL.Query().Get("role")
 		id := r.URL.Query().Get("id")
-		socketroom.JoinRoom(h, roomName, playerName, observer, id, w, r)
+		socketroom.JoinRoom(h, roomName, playerName, role, id, w, r)
 		fmt.Println("joined room")
 	}
 }
 
 func (s *Server) generateRoom(h *socketroom.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		room := socketroom.CreateRoom(h)
+		pS := r.URL.Query().Get("pointScale")
+		room := socketroom.CreateRoom(h, pS)
+		defer r.Body.Close()
 		n := socketroom.RoomName{Name: room.Name}
 		go room.Start()
-		h.ListRooms()
 		res, err := json.Marshal(n)
 		if err != nil {
 			fmt.Fprintf(w, "Error: %s", err)

@@ -116,7 +116,7 @@ func (c *Client) writePump() {
 }
 
 // JoinRoom handles inserting a client into a room and upgrading to WS.
-func JoinRoom(hub *Hub, roomName string, clientName string, observer string, id string, w http.ResponseWriter, r *http.Request) {
+func JoinRoom(hub *Hub, roomName string, clientName string, role string, id string, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Printf("Error during connection upgrade: %e", err)
@@ -131,7 +131,7 @@ func JoinRoom(hub *Hub, roomName string, clientName string, observer string, id 
 		Room:     room,
 		conn:     conn,
 		Name:     clientName,
-		observer: determineObserver(observer),
+		observer: determineObserver(role),
 		send:     make(chan GameMessage),
 		ID:       id,
 	}
@@ -155,8 +155,8 @@ func findRoom(hub *Hub, name string) (*Room, error) {
 	return nil, fmt.Errorf("Could not find room")
 }
 
-func determineObserver(observer string) bool {
-	if observer == "true" {
+func determineObserver(role string) bool {
+	if role == "OBSERVER" {
 		return true
 	}
 	return false
