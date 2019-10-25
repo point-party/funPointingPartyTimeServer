@@ -22,13 +22,14 @@ func (s *Server) Routes() {
 	s.Router.HandleFunc("/generateRoom", s.generateRoom(h))
 	s.Router.HandleFunc("/listRoomsAndClients", s.listRoomsAndClients(h))
 	s.Router.HandleFunc("/joinRoom", s.joinRoom(h))
+	s.Router.HandleFunc("/checkRoom", s.checkRoom(h))
 }
 
 func (s *Server) wakeup() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte("API is up and running"))
+		fmt.Fprint(w, "API up and running")
 	}
 }
 
@@ -41,6 +42,22 @@ func (s *Server) joinRoom(h *socketroom.Hub) http.HandlerFunc {
 		id := r.URL.Query().Get("id")
 		socketroom.JoinRoom(h, roomName, playerName, role, id, w, r)
 		fmt.Println("joined room")
+	}
+}
+
+func (s *Server) checkRoom(h *socketroom.Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		roomName := r.URL.Query().Get("room")
+		defer r.Body.Close()
+		_, ok := h.Rooms[roomName]
+		w.Header().Set("Content-Type", "application/json")
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "Room: %q doesn't exist", roomName)
+		} else {
+			w.WriteHeader(http.StatusAccepted)
+			fmt.Fprint(w, "Room exists")
+		}
 	}
 }
 
