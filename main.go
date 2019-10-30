@@ -7,10 +7,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
 func main() {
+	envErr := godotenv.Load()
+	if envErr != nil {
+		log.Fatal("Error loading .env file")
+	}
 	port := getPort()
 	s := server.Server{Router: http.NewServeMux()}
 	handler := cors.AllowAll().Handler(s.Router)
