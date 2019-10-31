@@ -34,7 +34,6 @@ func (s *Server) Routes() {
 	}
 	url := config.AuthCodeURL(sS)
 	go h.Run()
-	s.Router.Handle("/", http.FileServer(http.Dir("./static")))
 	s.Router.HandleFunc("/wakeup", s.wakeup())
 	s.Router.HandleFunc("/generateRoom", s.generateRoom(h))
 	s.Router.HandleFunc("/listRoomsAndClients", s.listRoomsAndClients(h))
@@ -79,24 +78,9 @@ func (s *Server) generateRoom(h *socketroom.Hub) http.HandlerFunc {
 	}
 }
 
+// Moved actual function into authentication package. Not sure how i feel about pattern yet
 func (s *Server) callback(config oauth2.Config, state string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
-		stateResp := r.FormValue("state")
-		if stateResp != state {
-			http.Error(w, "State code doesn't match", 400)
-			return
-		}
-		code := r.FormValue("code")
-		token, err := config.Exchange(oauth2.NoContext, code)
-		if err != nil {
-			fmt.Println("err", err)
-			http.Error(w, "Couldn't get token from code", 500)
-			return
-		}
-		resp := fmt.Sprintf("State: %s \n, Token: %s", stateResp, token)
-		w.Write([]byte(resp))
-	}
+	return authentication.GetToken(config, state)
 }
 
 func (s *Server) login(url string) http.HandlerFunc {
